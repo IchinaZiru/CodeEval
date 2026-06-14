@@ -2,7 +2,7 @@
 
 このリポジトリは、HumanEval-X の C++ 問題を対象に、正解ソースコードから設計書を逆生成し、その設計書から C++ コードを再生成して評価するための研究用パイプラインです。
 
-現時点では HumanEval-X 本体の取り込みや本格評価は行いません。まずはダミー問題 `problem_000` だけで、フォルダ構成、プロンプト生成、類似度計算、テスト実行、結果集約の最小フローを確認します。
+現時点では HumanEval-X 本体の取り込みや本格評価は行いません。まずはダミー問題 `problem_000`〜`problem_004` で、フォルダ構成、プロンプト生成、類似度計算、テスト実行、結果集約の小規模フローを確認します。
 
 ## 役割分担
 
@@ -32,6 +32,7 @@ HumanEval-X は、多言語コード生成能力を比較するためのベン�
 │   ├── ollama_client.py
 │   ├── run_design_generation.py
 │   ├── run_code_generation.py
+│   ├── run_pipeline.py
 │   ├── run_similarity.py
 │   ├── run_tests.py
 │   └── summarize_results.py
@@ -42,7 +43,7 @@ HumanEval-X は、多言語コード生成能力を比較するためのベン�
 ├── experiments/
 │   └── humanevalx_cpp/
 │       ├── problems/
-│       │   └── problem_000/
+│       │   ├── problem_000/
 │       │       ├── spec.md
 │       │       ├── original.cpp
 │       │       ├── test.cpp
@@ -52,9 +53,14 @@ HumanEval-X は、多言語コード生成能力を比較するためのベン�
 │       │       ├── generated_design/
 │       │       ├── generated_code/
 │       │       └── results/
+│       │   ├── problem_001/
+│       │   ├── problem_002/
+│       │   ├── problem_003/
+│       │   └── problem_004/
 │       └── summary/
 │           ├── similarity_results.csv
 │           ├── test_results.csv
+│           ├── summary_metrics.json
 │           └── report.md
 └── docs/
     ├── experiment_design.md
@@ -199,6 +205,50 @@ python scripts/summarize_results.py
 ```
 
 `run_tests.py` を使うには C++ コンパイラが必要です。`g++` 以外を使う場合は `--compiler` に利用可能なコンパイラ名またはパスを指定します。
+
+## 複数問題を一括実行する
+
+現在は HumanEval-X 本体ではなく、以下の小規模ダミー問題でパイプラインを安定化します。
+
+- `problem_000`: `add(int a, int b)`
+- `problem_001`: `max_int(int a, int b)`
+- `problem_002`: `is_even(int n)`
+- `problem_003`: `factorial(int n)`
+- `problem_004`: `reverse_string(std::string s)`
+
+`run_pipeline.py` は、指定された複数問題に対して次の順で処理します。
+
+1. `make_design_prompt.py`
+2. `run_design_generation.py`
+3. `run_code_generation.py`
+4. `run_similarity.py`
+5. `run_tests.py`
+
+例:
+
+```bash
+python scripts/run_pipeline.py --problem-ids problem_000 problem_001 problem_002 problem_003 problem_004 --model qwen2.5-coder:7b --temperature 0 --compiler C:\msys64\ucrt64\bin\g++.exe --ollama-url http://localhost:11434 --continue-on-error
+```
+
+`--continue-on-error` を指定すると、ある問題で失敗しても次の問題へ進みます。ただし、失敗した問題がある場合、スクリプト全体の終了コードは失敗として返します。
+
+一括実行後に summary を更新します。
+
+```bash
+python scripts/summarize_results.py
+```
+
+summary には以下を出力します。
+
+- `total_problems`
+- `design_generated_count`
+- `code_generated_count`
+- `similarity_available_count`
+- `average_similarity`
+- `compile_success_count`
+- `tests_passed_count`
+- `pass_at_1`
+- `failed_problem_ids`
 
 ## 今後の拡張
 

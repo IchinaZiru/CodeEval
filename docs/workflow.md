@@ -55,3 +55,11 @@ python scripts/summarize_results.py
 ```
 
 `experiments/humanevalx_cpp/summary/` 以下に CSV と Markdown レポートが出力される。
+
+## 複数問題を一括実行
+
+```bash
+python scripts/run_pipeline.py --problem-ids problem_000 problem_001 problem_002 problem_003 problem_004 --model qwen2.5-coder:7b --temperature 0 --compiler g++
+```
+
+`--continue-on-error` を指定すると、1 問で失敗しても次の問題に進む。

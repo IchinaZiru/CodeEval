@@ -11,9 +11,9 @@
 - `experiments/humanevalx_cpp/summary/`: 複数問題の結果を集約した CSV とレポートを置く場所。
 - `docs/`: 実験設計、構成、ワークフローの説明。
 
-## problem_000
+## problem_000 から problem_004
 
-`problem_000` は最小パイプライン確認用のダミー問題である。
+`problem_000`〜`problem_004` は小規模パイプライン確認用のダミー問題である。
 
 - `spec.md`: 問題仕様。
 - `original.cpp`: 正解実装。

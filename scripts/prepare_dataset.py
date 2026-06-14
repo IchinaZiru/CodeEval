@@ -12,6 +12,7 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_EXPERIMENT_DIR = ROOT_DIR / "experiments" / "humanevalx_cpp"
+DEFAULT_SELECTED_IDS_PATH = ROOT_DIR / "data" / "selected" / "selected_ids.txt"
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,14 +30,28 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    problem_dir = args.experiment_dir / "problems" / "problem_000"
     required_paths = [
         ROOT_DIR / "data" / "raw",
-        ROOT_DIR / "data" / "selected" / "selected_ids.txt",
-        problem_dir / "spec.md",
-        problem_dir / "original.cpp",
-        problem_dir / "test.cpp",
+        DEFAULT_SELECTED_IDS_PATH,
     ]
+
+    problem_ids: list[str] = []
+    if DEFAULT_SELECTED_IDS_PATH.exists():
+        problem_ids = [
+            line.strip()
+            for line in DEFAULT_SELECTED_IDS_PATH.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.strip().startswith("#")
+        ]
+
+    for problem_id in problem_ids:
+        problem_dir = args.experiment_dir / "problems" / problem_id
+        required_paths.extend(
+            [
+                problem_dir / "spec.md",
+                problem_dir / "original.cpp",
+                problem_dir / "test.cpp",
+            ]
+        )
 
     missing = [path for path in required_paths if not path.exists()]
     if missing:

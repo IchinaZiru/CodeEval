@@ -1,2 +1,6 @@
 problem_id,status,passed,compiler,compile_returncode,run_returncode
 problem_000,passed,True,C:\msys64\ucrt64\bin\g++.exe,0,0
+problem_001,missing_test_result,,,,
+problem_002,missing_test_result,,,,
+problem_003,missing_test_result,,,,
+problem_004,missing_test_result,,,,
