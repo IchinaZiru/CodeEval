@@ -74,6 +74,8 @@ python scripts/make_design_prompt.py --problem-id problem_000
 
 生成された `experiments/humanevalx_cpp/problems/problem_000/prompts/design_prompt.txt` をローカル LLM に入力します。
 
+生成される設計書には、関数名、C++ の関数シグネチャ、引数名と型、返り値の型と意味、処理内容、境界条件、想定される計算量を必ず含める方針です。特に C++ の関数シグネチャは、後続のコード生成で関数名・引数・戻り値を間違えないよう、Markdown の `cpp` コードブロックで明記させます。
+
 ### 2. ローカル LLM の設計書出力を保存する
 
 ローカル LLM が出力した設計書を、次のパスに保存します。
@@ -145,6 +147,8 @@ python scripts/make_design_prompt.py --problem-id problem_000
 ```bash
 python scripts/run_design_generation.py --problem-id problem_000 --model qwen2.5-coder:7b --temperature 0
 ```
+
+この設計書生成プロンプトは、後続の `run_code_generation.py` が参照するため、設計書内に C++ の関数シグネチャを `cpp` コードブロックで含めるよう指示します。
 
 出力先:
 
