@@ -1,2 +1,2 @@
 problem_id,status,similarity,original_path,generated_path
-problem_000,missing_similarity_result,,experiments/humanevalx_cpp/problems/problem_000/original.cpp,experiments/humanevalx_cpp/problems/problem_000/generated_code/generated.cpp
+problem_000,success,1.0,experiments/humanevalx_cpp/problems/problem_000/original.cpp,experiments/humanevalx_cpp/problems/problem_000/generated_code/generated.cpp
