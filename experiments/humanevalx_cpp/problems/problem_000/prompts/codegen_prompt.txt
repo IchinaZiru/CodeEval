@@ -1,0 +1,7 @@
+このファイルは、ローカル LLM が出力した設計書を `generated_design/design.md` に保存したあと、次のコマンドで生成します。
+
+```bash
+python scripts/make_codegen_prompt.py --problem-id problem_000
+```
+
+生成後のプロンプトは、設計書から C++ の関数実装だけを出力するようローカル LLM に指示します。
