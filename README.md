@@ -29,6 +29,9 @@ HumanEval-X は、多言語コード生成能力を比較するためのベン�
 │   ├── prepare_dataset.py
 │   ├── make_design_prompt.py
 │   ├── make_codegen_prompt.py
+│   ├── ollama_client.py
+│   ├── run_design_generation.py
+│   ├── run_code_generation.py
 │   ├── run_similarity.py
 │   ├── run_tests.py
 │   └── summarize_results.py
@@ -122,6 +125,76 @@ python scripts/summarize_results.py
 ```
 
 集約結果は `experiments/humanevalx_cpp/summary/` 以下に出力されます。
+
+## Ollama API を使う場合
+
+Ollama がローカルで起動しており、HTTP API `http://localhost:11434` にアクセスできる前提です。モデル名は環境によって異なるため、必ず `--model` で指定します。生成結果の再現性を高めるため、`--temperature` は指定可能で、初期値は `0` です。
+
+Codex は設計書や C++ コードを直接生成しません。以下のスクリプトは、プロンプトを Ollama API に送り、ローカル LLM の出力を所定の場所へ保存します。
+
+### 1. 設計書を Ollama で生成する
+
+必要に応じて設計書生成用プロンプトを更新します。
+
+```bash
+python scripts/make_design_prompt.py --problem-id problem_000
+```
+
+その後、Ollama API 経由で設計書を生成します。
+
+```bash
+python scripts/run_design_generation.py --problem-id problem_000 --model qwen2.5-coder:7b --temperature 0
+```
+
+出力先:
+
+```text
+experiments/humanevalx_cpp/problems/problem_000/generated_design/design.md
+```
+
+生成メタデータ:
+
+```text
+experiments/humanevalx_cpp/problems/problem_000/results/design_generation_metadata.json
+```
+
+Ollama の URL を変更する場合は `--ollama-url` を指定します。
+
+```bash
+python scripts/run_design_generation.py --problem-id problem_000 --model qwen2.5-coder:7b --temperature 0 --ollama-url http://localhost:11434
+```
+
+### 2. C++ コードを Ollama で生成する
+
+`run_code_generation.py` は `generated_design/design.md` を読み、`prompts/codegen_prompt.txt` を作成または更新してから Ollama API に送信します。
+
+```bash
+python scripts/run_code_generation.py --problem-id problem_000 --model qwen2.5-coder:7b --temperature 0
+```
+
+出力先:
+
+```text
+experiments/humanevalx_cpp/problems/problem_000/generated_code/generated.cpp
+```
+
+生成メタデータ:
+
+```text
+experiments/humanevalx_cpp/problems/problem_000/results/code_generation_metadata.json
+```
+
+モデルが Markdown のコードフェンス、たとえば ```` ```cpp ```` を含む応答を返した場合、保存時にはフェンス内部の C++ コードだけを抽出します。
+
+### 3. 類似度とテストを実行する
+
+```bash
+python scripts/run_similarity.py --problem-id problem_000
+python scripts/run_tests.py --problem-id problem_000 --compiler g++
+python scripts/summarize_results.py
+```
+
+`run_tests.py` を使うには C++ コンパイラが必要です。`g++` 以外を使う場合は `--compiler` に利用可能なコンパイラ名またはパスを指定します。
 
 ## 今後の拡張
 
