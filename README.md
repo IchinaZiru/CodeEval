@@ -251,6 +251,30 @@ summary には以下を出力します。
 - `pass_at_1`
 - `failed_problem_ids`
 
+## モデル別に実験結果を分離する
+
+複数モデルを比較する場合は `run_model_experiment.py` を使い、モデル名ごとに保存先を分けます。モデル名の `:` や `/` はディレクトリ名用に `_` へ変換されます。
+
+dry-run で保存先と実行予定コマンドを確認します。
+
+```bash
+python scripts/run_model_experiment.py --model qwen3-coder:latest --limit 10 --compiler g++ --continue-on-error --dry-run
+```
+
+実行時の保存先例:
+
+```text
+experiments/humanevalx_cpp_runs/baseline_prompt/qwen3-coder_latest/
+```
+
+実際に実行する場合:
+
+```bash
+python scripts/run_model_experiment.py --model qwen3-coder:latest --limit 10 --compiler g++ --continue-on-error --force-run
+```
+
+`experiments/humanevalx_cpp_runs/` はローカル実験結果として Git 管理から除外します。
+
 ## 今後の拡張
 
 本格実験では HumanEval-X 本体を `data/raw/` に配置し、対象問題 ID を `data/selected/selected_ids.txt` で管理します。その後、`prepare_dataset.py` を拡張して HumanEval-X の C++ 問題を `experiments/humanevalx_cpp/problems/` 以下に展開する予定です。
