@@ -1,7 +1,7 @@
 """Prepare HumanEval-X C++ records for the CodeEval problem layout.
 
-Step 2 can materialize metadata.json, original.cpp, spec.md, and empty support
-directories. It intentionally does not create test.cpp or generated artifacts.
+This materializes metadata.json, original.cpp, spec.md, test.cpp, and empty
+support directories. It intentionally does not create generated artifacts.
 """
 
 from __future__ import annotations
@@ -24,6 +24,22 @@ REQUIRED_FIELDS = [
     "test",
     "example_test",
 ]
+COMMON_TEST_INCLUDES = """#undef NDEBUG
+#include <cassert>
+#include <assert.h>
+#include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <map>
+#include <numeric>
+#include <set>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
+
+using namespace std;
+"""
 
 
 class DatasetPreparationError(RuntimeError):
@@ -78,7 +94,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Regenerate metadata.json, original.cpp, and spec.md if a problem directory already exists.",
+        help="Regenerate metadata.json, original.cpp, spec.md, and test.cpp if a problem directory already exists.",
     )
     return parser.parse_args()
 
@@ -195,6 +211,7 @@ def planned_paths(problem_dir: Path) -> list[Path]:
         problem_dir / "metadata.json",
         problem_dir / "original.cpp",
         problem_dir / "spec.md",
+        problem_dir / "test.cpp",
         problem_dir / "prompts",
         problem_dir / "generated_design",
         problem_dir / "generated_code",
@@ -236,6 +253,57 @@ def original_cpp(record: dict[str, Any]) -> str:
     declaration = str(record["declaration"]).rstrip()
     canonical_solution = str(record["canonical_solution"]).strip("\n")
     return f"{declaration}\n{canonical_solution}\n"
+
+
+def prototype_from_declaration(declaration: str) -> str:
+    before_body = declaration.split("{", 1)[0]
+    candidate_lines: list[str] = []
+
+    for raw_line in before_body.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("#") or line.startswith("using "):
+            candidate_lines = []
+            continue
+        if line.startswith("//") or line.startswith("/*") or line.startswith("*"):
+            continue
+        candidate_lines.append(line)
+
+    if not candidate_lines:
+        raise DatasetPreparationError("Could not extract function prototype from declaration.")
+
+    header = " ".join(candidate_lines)
+    return header.rstrip(";") + ";"
+
+
+def has_main_function(test_body: str) -> bool:
+    return "int main" in test_body
+
+
+def test_cpp(record: dict[str, Any]) -> str:
+    prototype = prototype_from_declaration(str(record["declaration"]))
+    test_body = str(record["test"]).strip()
+    sections = [
+        COMMON_TEST_INCLUDES.rstrip(),
+        "",
+        prototype,
+        "",
+        test_body,
+    ]
+
+    if not has_main_function(test_body):
+        sections.extend(
+            [
+                "",
+                "int main() {",
+                "    check();",
+                "    return 0;",
+                "}",
+            ]
+        )
+
+    return "\n".join(sections).rstrip() + "\n"
 
 
 def spec_md(item: dict[str, Any]) -> str:
@@ -286,6 +354,7 @@ def materialize_problem(experiment_dir: Path, item: dict[str, Any], force: bool)
     )
     write_text(problem_dir / "original.cpp", original_cpp(item["record"]))
     write_text(problem_dir / "spec.md", spec_md(item))
+    write_text(problem_dir / "test.cpp", test_cpp(item["record"]))
 
 
 def materialize_problems(experiment_dir: Path, items: list[dict[str, Any]], force: bool) -> None:
