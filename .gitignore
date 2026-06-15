@@ -11,3 +11,20 @@ experiments/**/results/build/
 
 # Local HumanEval-X raw data. Keep benchmark source data out of Git.
 data/raw/humanevalx_cpp/*.jsonl
+
+# HumanEval-X materialized local dataset files.
+# These are derived from local benchmark JSONL and should not be committed.
+experiments/humanevalx_cpp/problems/problem_*/metadata.json
+experiments/humanevalx_cpp/problems/problem_*/original.cpp
+experiments/humanevalx_cpp/problems/problem_*/spec.md
+experiments/humanevalx_cpp/problems/problem_*/test.cpp
+experiments/humanevalx_cpp/dataset_manifest.json
+
+# LLM prompts, generated designs, generated code, and experiment results.
+experiments/humanevalx_cpp/problems/problem_*/prompts/
+experiments/humanevalx_cpp/problems/problem_*/generated_design/
+experiments/humanevalx_cpp/problems/problem_*/generated_code/
+experiments/humanevalx_cpp/problems/problem_*/results/
+
+# Summary outputs generated from local experiments.
+summary/

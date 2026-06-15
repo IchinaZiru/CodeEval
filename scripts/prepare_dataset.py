@@ -1,7 +1,7 @@
-"""Load and select HumanEval-X C++ records without materializing problem files.
+"""Prepare HumanEval-X C++ records for the CodeEval problem layout.
 
-Step 1 intentionally performs no writes. It only validates the local JSONL and
-prints the CodeEval problem_id to HumanEval-X task_id mapping.
+Step 2 can materialize metadata.json, original.cpp, spec.md, and empty support
+directories. It intentionally does not create test.cpp or generated artifacts.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ class DatasetPreparationError(RuntimeError):
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Validate and select HumanEval-X C++ JSONL records without writing problem files."
+        description="Validate, select, and optionally materialize HumanEval-X C++ records."
     )
     parser.add_argument(
         "--raw-jsonl",
@@ -73,7 +73,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Print selected mapping without writing files.",
+        help="Print selected mapping and planned files without writing anything.",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Regenerate metadata.json, original.cpp, and spec.md if a problem directory already exists.",
     )
     return parser.parse_args()
 
@@ -130,6 +135,7 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
                 raise DatasetPreparationError(f"Line {line_number} must be a JSON object.")
 
             validate_record(parsed, line_number)
+            parsed["_source_index"] = len(records)
             records.append(parsed)
 
     return records
@@ -157,11 +163,145 @@ def codeeval_problem_id(index: int) -> str:
     return f"problem_{index:03d}"
 
 
-def print_selection(raw_jsonl: Path, selected_records: list[dict[str, Any]]) -> None:
-    print(f"Selected {len(selected_records)} problems from {display_path(raw_jsonl)}")
+def selected_items(
+    selected_records: list[dict[str, Any]],
+    *,
+    start_index: int,
+    task_ids: list[str] | None,
+) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for offset, record in enumerate(selected_records):
+        source_index = int(record["_source_index"])
+        problem_id = codeeval_problem_id(offset)
+        items.append(
+            {
+                "problem_id": problem_id,
+                "source_index": source_index,
+                "record": record,
+            }
+        )
+    return items
+
+
+def print_selection(raw_jsonl: Path, items: list[dict[str, Any]]) -> None:
+    print(f"Selected {len(items)} problems from {display_path(raw_jsonl)}")
     print()
-    for index, record in enumerate(selected_records):
-        print(f"{codeeval_problem_id(index)} <- {record['task_id']}")
+    for item in items:
+        print(f"{item['problem_id']} <- {item['record']['task_id']}")
+
+
+def planned_paths(problem_dir: Path) -> list[Path]:
+    return [
+        problem_dir / "metadata.json",
+        problem_dir / "original.cpp",
+        problem_dir / "spec.md",
+        problem_dir / "prompts",
+        problem_dir / "generated_design",
+        problem_dir / "generated_code",
+        problem_dir / "results",
+    ]
+
+
+def print_dry_run_plan(experiment_dir: Path, items: list[dict[str, Any]]) -> None:
+    print()
+    print("Dry-run: planned materialization")
+    for item in items:
+        problem_dir = experiment_dir / "problems" / item["problem_id"]
+        print()
+        print(f"{item['problem_id']} ({item['record']['task_id']})")
+        for path in planned_paths(problem_dir):
+            print(f"  - {display_path(path)}")
+
+
+def ensure_safe_to_materialize(problem_dir: Path, force: bool) -> None:
+    if not problem_dir.exists() or force:
+        return
+
+    raise DatasetPreparationError(
+        f"Problem directory already exists and --force was not specified: {display_path(problem_dir)}"
+    )
+
+
+def metadata_payload(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "problem_id": item["problem_id"],
+        "source": "HumanEval-X",
+        "language": "cpp",
+        "task_id": item["record"]["task_id"],
+        "source_index": item["source_index"],
+    }
+
+
+def original_cpp(record: dict[str, Any]) -> str:
+    declaration = str(record["declaration"]).rstrip()
+    canonical_solution = str(record["canonical_solution"]).strip("\n")
+    return f"{declaration}\n{canonical_solution}\n"
+
+
+def spec_md(item: dict[str, Any]) -> str:
+    record = item["record"]
+    return f"""# {item['problem_id']}
+
+- source: HumanEval-X
+- language: cpp
+- task_id: {record['task_id']}
+- source_index: {item['source_index']}
+
+## 注意
+
+この `spec.md` は人間確認用のメタ情報です。
+`make_design_prompt.py` はこのファイルではなく `original.cpp` を入力にして設計書生成プロンプトを作成します。
+
+## prompt
+
+```text
+{record['prompt'].rstrip()}
+```
+
+## declaration
+
+```cpp
+{record['declaration'].rstrip()}
+```
+"""
+
+
+def write_text(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
+def materialize_problem(experiment_dir: Path, item: dict[str, Any], force: bool) -> None:
+    problem_dir = experiment_dir / "problems" / item["problem_id"]
+    ensure_safe_to_materialize(problem_dir, force)
+
+    for directory_name in ["prompts", "generated_design", "generated_code", "results"]:
+        (problem_dir / directory_name).mkdir(parents=True, exist_ok=True)
+
+    metadata_path = problem_dir / "metadata.json"
+    metadata_path.parent.mkdir(parents=True, exist_ok=True)
+    metadata_path.write_text(
+        json.dumps(metadata_payload(item), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    write_text(problem_dir / "original.cpp", original_cpp(item["record"]))
+    write_text(problem_dir / "spec.md", spec_md(item))
+
+
+def materialize_problems(experiment_dir: Path, items: list[dict[str, Any]], force: bool) -> None:
+    for item in items:
+        problem_dir = experiment_dir / "problems" / item["problem_id"]
+        ensure_safe_to_materialize(problem_dir, force)
+
+    for item in items:
+        materialize_problem(experiment_dir, item, force)
+
+
+def print_materialized(experiment_dir: Path, items: list[dict[str, Any]]) -> None:
+    print()
+    for item in items:
+        problem_dir = experiment_dir / "problems" / item["problem_id"]
+        print(f"Materialized {display_path(problem_dir)}")
 
 
 def main() -> int:
@@ -177,21 +317,29 @@ def main() -> int:
             start_index=args.start_index,
             limit=args.limit,
         )
+        items = selected_items(
+            selected_records,
+            start_index=args.start_index,
+            task_ids=args.task_ids,
+        )
     except DatasetPreparationError as exc:
         print(exc)
         return 1
 
-    print_selection(raw_jsonl, selected_records)
+    experiment_dir = resolve_input_path(args.experiment_dir)
+    print_selection(raw_jsonl, items)
 
     if args.dry_run:
+        print_dry_run_plan(experiment_dir, items)
         return 0
 
-    print()
-    print(
-        "dataset loading and selection succeeded, but materialization is not implemented in this step"
-    )
-    print(f"future experiment_dir: {display_path(resolve_input_path(args.experiment_dir))}")
-    print(f"future selected_ids_path: {display_path(resolve_input_path(args.selected_ids_path))}")
+    try:
+        materialize_problems(experiment_dir, items, args.force)
+    except DatasetPreparationError as exc:
+        print(exc)
+        return 1
+
+    print_materialized(experiment_dir, items)
     return 0
 
 
