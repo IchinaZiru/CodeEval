@@ -120,6 +120,11 @@ def parse_args() -> argparse.Namespace:
         default=10.0,
         help="Compile and run timeout in seconds for --validate-original. Defaults to 10.",
     )
+    parser.add_argument(
+        "--write-selected-ids",
+        action="store_true",
+        help="Write selected CodeEval problem IDs to --selected-ids-path.",
+    )
     return parser.parse_args()
 
 
@@ -327,6 +332,64 @@ def print_original_validation_dry_run(
         print("  compile: " + " ".join(command))
         print(f"  run: {display_path(paths['executable'])}")
         print(f"  result: {display_path(paths['result'])}")
+
+
+def selected_problem_ids(items: list[dict[str, Any]]) -> list[str]:
+    return [str(item["problem_id"]) for item in items]
+
+
+def manifest_path(experiment_dir: Path) -> Path:
+    return experiment_dir / "dataset_manifest.json"
+
+
+def manifest_item(experiment_dir: Path, item: dict[str, Any]) -> dict[str, Any]:
+    problem_dir = experiment_dir / "problems" / item["problem_id"]
+    validation_path = original_validation_paths(experiment_dir, item["problem_id"])["result"]
+    return {
+        "problem_id": item["problem_id"],
+        "task_id": item["record"]["task_id"],
+        "source_index": item["source_index"],
+        "original_path": display_path(problem_dir / "original.cpp"),
+        "test_path": display_path(problem_dir / "test.cpp"),
+        "metadata_path": display_path(problem_dir / "metadata.json"),
+        "validation_path": display_path(validation_path),
+    }
+
+
+def dataset_manifest(experiment_dir: Path, items: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "source": "HumanEval-X",
+        "language": "cpp",
+        "count": len(items),
+        "items": [manifest_item(experiment_dir, item) for item in items],
+    }
+
+
+def print_selection_outputs_dry_run(
+    experiment_dir: Path,
+    selected_ids_path: Path,
+    items: list[dict[str, Any]],
+    write_selected_ids: bool,
+) -> None:
+    print()
+    print("Dry-run: planned selection outputs")
+    if write_selected_ids:
+        print(f"selected_ids_path: {display_path(selected_ids_path)}")
+        for problem_id in selected_problem_ids(items):
+            print(f"  {problem_id}")
+    else:
+        print("selected_ids_path: not written unless --write-selected-ids is specified")
+
+    print(f"dataset_manifest_path: {display_path(manifest_path(experiment_dir))}")
+
+
+def write_selected_ids(path: Path, items: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(selected_problem_ids(items)) + "\n", encoding="utf-8")
+
+
+def write_dataset_manifest(experiment_dir: Path, items: list[dict[str, Any]]) -> None:
+    write_json(manifest_path(experiment_dir), dataset_manifest(experiment_dir, items))
 
 
 def ensure_safe_to_materialize(problem_dir: Path, force: bool) -> None:
@@ -633,10 +696,17 @@ def main() -> int:
         return 1
 
     experiment_dir = resolve_input_path(args.experiment_dir)
+    selected_ids_path = resolve_input_path(args.selected_ids_path)
     print_selection(raw_jsonl, items)
 
     if args.dry_run:
         print_dry_run_plan(experiment_dir, items)
+        print_selection_outputs_dry_run(
+            experiment_dir,
+            selected_ids_path,
+            items,
+            args.write_selected_ids,
+        )
         if args.validate_original:
             print_original_validation_dry_run(experiment_dir, items, args.compiler, args.std)
         return 0
@@ -648,6 +718,13 @@ def main() -> int:
         return 1
 
     print_materialized(experiment_dir, items)
+    if args.write_selected_ids:
+        write_selected_ids(selected_ids_path, items)
+        print(f"Wrote selected IDs: {display_path(selected_ids_path)}")
+
+    write_dataset_manifest(experiment_dir, items)
+    print(f"Wrote dataset manifest: {display_path(manifest_path(experiment_dir))}")
+
     if args.validate_original:
         failed_problem_ids = validate_originals(
             experiment_dir,
