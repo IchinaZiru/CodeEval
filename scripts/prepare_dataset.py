@@ -8,6 +8,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -95,6 +98,27 @@ def parse_args() -> argparse.Namespace:
         "--force",
         action="store_true",
         help="Regenerate metadata.json, original.cpp, spec.md, and test.cpp if a problem directory already exists.",
+    )
+    parser.add_argument(
+        "--validate-original",
+        action="store_true",
+        help="Compile and run original.cpp with test.cpp for each selected problem.",
+    )
+    parser.add_argument(
+        "--compiler",
+        default="g++",
+        help="C++ compiler command or path for --validate-original. Defaults to g++.",
+    )
+    parser.add_argument(
+        "--std",
+        default="c++17",
+        help="C++ standard for --validate-original. Defaults to c++17.",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=10.0,
+        help="Compile and run timeout in seconds for --validate-original. Defaults to 10.",
     )
     return parser.parse_args()
 
@@ -228,6 +252,81 @@ def print_dry_run_plan(experiment_dir: Path, items: list[dict[str, Any]]) -> Non
         print(f"{item['problem_id']} ({item['record']['task_id']})")
         for path in planned_paths(problem_dir):
             print(f"  - {display_path(path)}")
+
+
+def original_validation_paths(experiment_dir: Path, problem_id: str) -> dict[str, Path]:
+    problem_dir = experiment_dir / "problems" / problem_id
+    executable_name = "original_test.exe" if os.name == "nt" else "original_test"
+    return {
+        "problem_dir": problem_dir,
+        "original": problem_dir / "original.cpp",
+        "test": problem_dir / "test.cpp",
+        "result": problem_dir / "results" / "original_validation.json",
+        "executable": problem_dir / "results" / executable_name,
+    }
+
+
+def resolve_compiler(compiler: str) -> Path | None:
+    compiler_path = Path(compiler)
+    if compiler_path.exists():
+        return compiler_path.resolve()
+    found = shutil.which(compiler)
+    return Path(found).resolve() if found else None
+
+
+def build_validation_env(compiler_path: Path | None) -> dict[str, str]:
+    env = os.environ.copy()
+    if compiler_path is None:
+        return env
+
+    compiler_dir = str(compiler_path.parent)
+    path_entries = env.get("PATH", "").split(os.pathsep)
+    if not any(entry.lower() == compiler_dir.lower() for entry in path_entries):
+        env["PATH"] = compiler_dir + os.pathsep + env.get("PATH", "")
+    return env
+
+
+def original_compile_command(
+    compiler_command: str,
+    std: str,
+    original_path: Path,
+    test_path: Path,
+    executable_path: Path,
+) -> list[str]:
+    return [
+        compiler_command,
+        f"-std={std}",
+        str(original_path.resolve()),
+        str(test_path.resolve()),
+        "-o",
+        str(executable_path.resolve()),
+    ]
+
+
+def print_original_validation_dry_run(
+    experiment_dir: Path,
+    items: list[dict[str, Any]],
+    compiler: str,
+    std: str,
+) -> None:
+    print()
+    print("Dry-run: planned original validation commands")
+    compiler_path = resolve_compiler(compiler)
+    compiler_command = str(compiler_path) if compiler_path else compiler
+    for item in items:
+        paths = original_validation_paths(experiment_dir, item["problem_id"])
+        command = original_compile_command(
+            compiler_command,
+            std,
+            paths["original"],
+            paths["test"],
+            paths["executable"],
+        )
+        print()
+        print(f"{item['problem_id']} ({item['record']['task_id']})")
+        print("  compile: " + " ".join(command))
+        print(f"  run: {display_path(paths['executable'])}")
+        print(f"  result: {display_path(paths['result'])}")
 
 
 def ensure_safe_to_materialize(problem_dir: Path, force: bool) -> None:
@@ -366,6 +465,144 @@ def materialize_problems(experiment_dir: Path, items: list[dict[str, Any]], forc
         materialize_problem(experiment_dir, item, force)
 
 
+def write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def validate_original_problem(
+    experiment_dir: Path,
+    item: dict[str, Any],
+    compiler: str,
+    std: str,
+    timeout: float,
+) -> dict[str, Any]:
+    problem_id = item["problem_id"]
+    paths = original_validation_paths(experiment_dir, problem_id)
+    compiler_path = resolve_compiler(compiler)
+    compiler_command = str(compiler_path) if compiler_path else compiler
+    compile_command = original_compile_command(
+        compiler_command,
+        std,
+        paths["original"],
+        paths["test"],
+        paths["executable"],
+    )
+    payload: dict[str, Any] = {
+        "problem_id": problem_id,
+        "compiler": compiler,
+        "compiler_exists": compiler_path is not None,
+        "compile_command": compile_command,
+        "compile_returncode": None,
+        "compile_stdout": "",
+        "compile_stderr": "",
+        "run_returncode": None,
+        "run_stdout": "",
+        "run_stderr": "",
+        "passed": False,
+        "status": "",
+    }
+
+    if compiler_path is None:
+        payload["status"] = "compiler_not_found"
+        write_json(paths["result"], payload)
+        return payload
+
+    paths["executable"].parent.mkdir(parents=True, exist_ok=True)
+    env = build_validation_env(compiler_path)
+
+    try:
+        compile_result = subprocess.run(
+            compile_command,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=str(ROOT_DIR),
+            env=env,
+        )
+    except subprocess.TimeoutExpired as exc:
+        payload.update(
+            {
+                "status": "compile_timeout",
+                "compile_stdout": exc.stdout or "",
+                "compile_stderr": exc.stderr or "",
+            }
+        )
+        write_json(paths["result"], payload)
+        return payload
+
+    payload.update(
+        {
+            "compile_returncode": compile_result.returncode,
+            "compile_stdout": compile_result.stdout,
+            "compile_stderr": compile_result.stderr,
+        }
+    )
+
+    if compile_result.returncode != 0:
+        payload["status"] = "compile_failed"
+        write_json(paths["result"], payload)
+        return payload
+
+    try:
+        run_result = subprocess.run(
+            [str(paths["executable"].resolve())],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=str(ROOT_DIR),
+            env=env,
+        )
+    except subprocess.TimeoutExpired as exc:
+        payload.update(
+            {
+                "status": "run_timeout",
+                "run_stdout": exc.stdout or "",
+                "run_stderr": exc.stderr or "",
+            }
+        )
+        write_json(paths["result"], payload)
+        return payload
+
+    passed = run_result.returncode == 0
+    payload.update(
+        {
+            "run_returncode": run_result.returncode,
+            "run_stdout": run_result.stdout,
+            "run_stderr": run_result.stderr,
+            "passed": passed,
+            "status": "passed" if passed else "run_failed",
+        }
+    )
+    write_json(paths["result"], payload)
+    return payload
+
+
+def validate_originals(
+    experiment_dir: Path,
+    items: list[dict[str, Any]],
+    compiler: str,
+    std: str,
+    timeout: float,
+) -> list[str]:
+    failed_problem_ids: list[str] = []
+    for item in items:
+        result = validate_original_problem(experiment_dir, item, compiler, std, timeout)
+        if result["status"] != "passed":
+            failed_problem_ids.append(item["problem_id"])
+
+    print()
+    if failed_problem_ids:
+        print("Original validation failed for:")
+        for problem_id in failed_problem_ids:
+            print(f"- {problem_id}")
+    else:
+        print("Original validation passed for all selected problems.")
+    return failed_problem_ids
+
+
 def print_materialized(experiment_dir: Path, items: list[dict[str, Any]]) -> None:
     print()
     for item in items:
@@ -400,6 +637,8 @@ def main() -> int:
 
     if args.dry_run:
         print_dry_run_plan(experiment_dir, items)
+        if args.validate_original:
+            print_original_validation_dry_run(experiment_dir, items, args.compiler, args.std)
         return 0
 
     try:
@@ -409,6 +648,15 @@ def main() -> int:
         return 1
 
     print_materialized(experiment_dir, items)
+    if args.validate_original:
+        failed_problem_ids = validate_originals(
+            experiment_dir,
+            items,
+            args.compiler,
+            args.std,
+            args.timeout,
+        )
+        return 1 if failed_problem_ids else 0
     return 0
 
 
