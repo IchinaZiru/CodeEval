@@ -1,9 +1,13 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.venv/
 
 # Local build outputs from C++ test runs.
 experiments/**/results/build/
 *.exe
 *.obj
 *.o
+
+# Local HumanEval-X raw data. Keep benchmark source data out of Git.
+data/raw/humanevalx_cpp/*.jsonl

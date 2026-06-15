@@ -65,6 +65,7 @@ HumanEval-X は、多言語コード生成能力を比較するためのベン�
 └── docs/
     ├── experiment_design.md
     ├── directory_structure.md
+    ├── setup_humanevalx.md
     └── workflow.md
 ```
 
@@ -253,3 +254,5 @@ summary には以下を出力します。
 ## 今後の拡張
 
 本格実験では HumanEval-X 本体を `data/raw/` に配置し、対象問題 ID を `data/selected/selected_ids.txt` で管理します。その後、`prepare_dataset.py` を拡張して HumanEval-X の C++ 問題を `experiments/humanevalx_cpp/problems/` 以下に展開する予定です。
+
+HumanEval-X C++ JSONL をローカルに用意する手順は [docs/setup_humanevalx.md](docs/setup_humanevalx.md) にまとめています。生データ JSONL は `data/raw/humanevalx_cpp/humaneval_cpp.jsonl` に配置しますが、GitHub にはコミットしない方針です。
