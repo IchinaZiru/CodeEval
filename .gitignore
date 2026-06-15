@@ -28,3 +28,6 @@ experiments/humanevalx_cpp/problems/problem_*/results/
 
 # Summary outputs generated from local experiments.
 summary/
+
+# Model-specific local experiment runs.
+experiments/humanevalx_cpp_runs/
