@@ -1,0 +1,36 @@
+{
+  "problem_id": "problem_004",
+  "compiler": "C:\\msys64\\ucrt64\\bin\\g++.exe",
+  "compiler_exists": true,
+  "compiler_resolved_path": "C:\\msys64\\ucrt64\\bin\\g++.exe",
+  "compiler_parent": "C:\\msys64\\ucrt64\\bin",
+  "cwd": "C:\\Users\\kikumanetworklab\\Documents\\GitHub\\CodeEval",
+  "test_path": "experiments/humanevalx_cpp/problems/problem_004/test.cpp",
+  "test_abs_path": "C:\\Users\\kikumanetworklab\\Documents\\GitHub\\CodeEval\\experiments\\humanevalx_cpp\\problems\\problem_004\\test.cpp",
+  "generated_path": "experiments/humanevalx_cpp/problems/problem_004/generated_code/generated.cpp",
+  "generated_abs_path": "C:\\Users\\kikumanetworklab\\Documents\\GitHub\\CodeEval\\experiments\\humanevalx_cpp\\problems\\problem_004\\generated_code\\generated.cpp",
+  "build_dir": "C:\\Users\\kikumanetworklab\\Documents\\GitHub\\CodeEval\\experiments\\humanevalx_cpp\\problems\\problem_004\\results\\build",
+  "executable_path": "C:\\Users\\kikumanetworklab\\Documents\\GitHub\\CodeEval\\experiments\\humanevalx_cpp\\problems\\problem_004\\results\\build\\test_generated.exe",
+  "compiler_parent_added_to_path": true,
+  "path_contains_compiler_parent": false,
+  "compiler_probe": {
+    "status": "ran",
+    "returncode": 0,
+    "stdout": "g++.exe (Rev5, Built by MSYS2 project) 16.1.0\nCopyright (C) 2026 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+    "stderr": ""
+  },
+  "compile_command": [
+    "C:\\msys64\\ucrt64\\bin\\g++.exe",
+    "-std=c++17",
+    "C:\\Users\\kikumanetworklab\\Documents\\GitHub\\CodeEval\\experiments\\humanevalx_cpp\\problems\\problem_004\\generated_code\\generated.cpp",
+    "C:\\Users\\kikumanetworklab\\Documents\\GitHub\\CodeEval\\experiments\\humanevalx_cpp\\problems\\problem_004\\test.cpp",
+    "-o",
+    "C:\\Users\\kikumanetworklab\\Documents\\GitHub\\CodeEval\\experiments\\humanevalx_cpp\\problems\\problem_004\\results\\build\\test_generated.exe"
+  ],
+  "compile_returncode": 1,
+  "compile_stdout": "",
+  "compile_stderr": "C:\\Users\\kikumanetworklab\\Documents\\GitHub\\CodeEval\\experiments\\humanevalx_cpp\\problems\\problem_004\\generated_code\\generated.cpp:1:6: error: 'string' in namespace 'std' does not name a type\n    1 | std::string reverse_string(std::string s) {\n      |      ^~~~~~\nC:\\Users\\kikumanetworklab\\Documents\\GitHub\\CodeEval\\experiments\\humanevalx_cpp\\problems\\problem_004\\generated_code\\generated.cpp:1:1: note: 'std::string' is defined in header '<string>'; this is probably fixable by adding '#include <string>'\n  +++ |+#include <string>\n    1 | std::string reverse_string(std::string s) {\n",
+  "status": "compile_failed",
+  "passed": false,
+  "diagnostic": "Compilation failed. Check compile_stderr and compile_stdout."
+}

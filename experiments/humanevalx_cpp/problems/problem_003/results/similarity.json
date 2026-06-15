@@ -1,0 +1,9 @@
+{
+  "problem_id": "problem_003",
+  "status": "success",
+  "similarity": 0.9920634920634921,
+  "original_path": "experiments/humanevalx_cpp/problems/problem_003/original.cpp",
+  "generated_path": "experiments/humanevalx_cpp/problems/problem_003/generated_code/generated.cpp",
+  "original_chars": 126,
+  "generated_chars": 126
+}

@@ -1,6 +1,6 @@
 problem_id,status,similarity,original_path,generated_path
 problem_000,success,1.0,experiments/humanevalx_cpp/problems/problem_000/original.cpp,experiments/humanevalx_cpp/problems/problem_000/generated_code/generated.cpp
-problem_001,missing_similarity_result,,experiments/humanevalx_cpp/problems/problem_001/original.cpp,experiments/humanevalx_cpp/problems/problem_001/generated_code/generated.cpp
-problem_002,missing_similarity_result,,experiments/humanevalx_cpp/problems/problem_002/original.cpp,experiments/humanevalx_cpp/problems/problem_002/generated_code/generated.cpp
-problem_003,missing_similarity_result,,experiments/humanevalx_cpp/problems/problem_003/original.cpp,experiments/humanevalx_cpp/problems/problem_003/generated_code/generated.cpp
-problem_004,missing_similarity_result,,experiments/humanevalx_cpp/problems/problem_004/original.cpp,experiments/humanevalx_cpp/problems/problem_004/generated_code/generated.cpp
+problem_001,success,0.9824561403508771,experiments/humanevalx_cpp/problems/problem_001/original.cpp,experiments/humanevalx_cpp/problems/problem_001/generated_code/generated.cpp
+problem_002,success,0.9791666666666666,experiments/humanevalx_cpp/problems/problem_002/original.cpp,experiments/humanevalx_cpp/problems/problem_002/generated_code/generated.cpp
+problem_003,success,0.9920634920634921,experiments/humanevalx_cpp/problems/problem_003/original.cpp,experiments/humanevalx_cpp/problems/problem_003/generated_code/generated.cpp
+problem_004,success,0.41954022988505746,experiments/humanevalx_cpp/problems/problem_004/original.cpp,experiments/humanevalx_cpp/problems/problem_004/generated_code/generated.cpp

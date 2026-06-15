@@ -1,0 +1,9 @@
+{
+  "problem_id": "problem_003",
+  "model": "gpt-oss:20b",
+  "temperature": 0.0,
+  "ollama_url": "http://localhost:11434",
+  "prompt_path": "experiments/humanevalx_cpp/problems/problem_003/prompts/codegen_prompt.txt",
+  "output_path": "experiments/humanevalx_cpp/problems/problem_003/generated_code/generated.cpp",
+  "timestamp": "2026-06-14T12:43:08.096151+00:00"
+}
