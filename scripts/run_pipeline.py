@@ -15,6 +15,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = ROOT_DIR / "scripts"
 DEFAULT_EXPERIMENT_DIR = ROOT_DIR / "experiments" / "humanevalx_cpp"
 DEFAULT_SELECTED_IDS_PATH = ROOT_DIR / "data" / "selected" / "selected_ids.txt"
+DEFAULT_PROMPT_VERSION = "prompt_v2_signature_include"
 
 
 @dataclass(frozen=True)
@@ -51,6 +52,17 @@ def parse_args() -> argparse.Namespace:
         help=f"Ollama base URL. Defaults to {DEFAULT_OLLAMA_URL}.",
     )
     parser.add_argument(
+        "--ollama-timeout",
+        type=float,
+        default=120.0,
+        help="Ollama request timeout in seconds. Defaults to 120.",
+    )
+    parser.add_argument(
+        "--prompt-version",
+        default=DEFAULT_PROMPT_VERSION,
+        help=f"Prompt version label passed to generation metadata. Defaults to {DEFAULT_PROMPT_VERSION}.",
+    )
+    parser.add_argument(
         "--continue-on-error",
         action="store_true",
         help="Continue with later problems when a step fails.",
@@ -85,6 +97,7 @@ def script_command(script_name: str, *args: str) -> list[str]:
 def steps_for_problem(args: argparse.Namespace, problem_id: str) -> list[PipelineStep]:
     experiment_dir = str(args.experiment_dir)
     temperature = str(args.temperature)
+    ollama_timeout = str(args.ollama_timeout)
 
     return [
         PipelineStep(
@@ -109,6 +122,10 @@ def steps_for_problem(args: argparse.Namespace, problem_id: str) -> list[Pipelin
                 temperature,
                 "--ollama-url",
                 args.ollama_url,
+                "--ollama-timeout",
+                ollama_timeout,
+                "--prompt-version",
+                args.prompt_version,
                 "--experiment-dir",
                 experiment_dir,
             ),
@@ -125,6 +142,10 @@ def steps_for_problem(args: argparse.Namespace, problem_id: str) -> list[Pipelin
                 temperature,
                 "--ollama-url",
                 args.ollama_url,
+                "--ollama-timeout",
+                ollama_timeout,
+                "--prompt-version",
+                args.prompt_version,
                 "--experiment-dir",
                 experiment_dir,
             ),
