@@ -12,6 +12,7 @@ from evaluation_metrics import (
     collect_run_rows,
     display_path,
     generation_failed_or_timeout_count,
+    read_csv_rows,
     read_json,
     resolve_path,
     run_summary_metrics,
@@ -94,6 +95,30 @@ def failed_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [row for row in rows if row.get("passed") is not True]
 
 
+def coerce_value(value: Any) -> Any:
+    if value == "True":
+        return True
+    if value == "False":
+        return False
+    if isinstance(value, str) and value.strip():
+        try:
+            return float(value)
+        except ValueError:
+            return value
+    return value
+
+
+def load_combined_rows(model_dir: Path) -> list[dict[str, Any]]:
+    with_dolos_path = model_dir / "summary" / "combined_summary_with_dolos.csv"
+    combined_path = model_dir / "summary" / "combined_summary.csv"
+    if with_dolos_path.exists():
+        return [{key: coerce_value(value) for key, value in row.items()} for row in read_csv_rows(with_dolos_path)]
+    if combined_path.exists():
+        return [{key: coerce_value(value) for key, value in row.items()} for row in read_csv_rows(combined_path)]
+    _, combined_rows = collect_run_rows(model_dir)
+    return combined_rows
+
+
 def model_summary_row(prompt_version: str, model_dir: Path, rows: list[dict[str, Any]]) -> dict[str, Any]:
     metrics = run_summary_metrics(rows)
     counts = status_counts(rows)
@@ -155,7 +180,7 @@ def main() -> int:
         if not model_dir.exists():
             print(f"Model directory not found: {display_path(model_dir)}")
             return 1
-        _, combined_rows = collect_run_rows(model_dir)
+        combined_rows = load_combined_rows(model_dir)
         for row in combined_rows:
             row["prompt_version"] = args.prompt_version
             row["model_dir"] = model_dir.name

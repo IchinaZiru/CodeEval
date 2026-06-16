@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import re
 from pathlib import Path
+from typing import Any
 
-from evaluation_metrics import display_path, read_csv_rows, resolve_path, write_csv
+from evaluation_metrics import display_path, read_csv_rows, resolve_path, run_summary_metrics, write_csv, write_json
 
 
 def parse_args() -> argparse.Namespace:
@@ -19,6 +21,102 @@ def parse_args() -> argparse.Namespace:
         help="Output CSV. Defaults to <run-dir>/summary/combined_summary_with_dolos.csv.",
     )
     return parser.parse_args()
+
+
+PROBLEM_FILE_RE = re.compile(r"^(problem_\d+)_(original|generated)\.cpp$")
+
+
+def problem_file_role(path_text: str) -> tuple[str, str] | None:
+    filename = Path(path_text).name
+    match = PROBLEM_FILE_RE.match(filename)
+    if not match:
+        return None
+    return match.group(1), match.group(2)
+
+
+def parse_float(value: str | None) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
+def parse_generic_dolos_rows(rows: list[dict[str, str]]) -> dict[str, dict[str, Any]]:
+    parsed: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        problem_id = row.get("problem_id", "").strip()
+        if not problem_id:
+            continue
+        parsed[problem_id] = {
+            "dolos_similarity": row.get("dolos_similarity", ""),
+            "dolos_notes": row.get("dolos_notes", ""),
+        }
+    return parsed
+
+
+def parse_dolos_pairs_rows(rows: list[dict[str, str]]) -> dict[str, dict[str, Any]]:
+    parsed: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        left = problem_file_role(row.get("leftFilePath", ""))
+        right = problem_file_role(row.get("rightFilePath", ""))
+        if left is None or right is None:
+            continue
+
+        left_problem_id, left_role = left
+        right_problem_id, right_role = right
+        if left_problem_id != right_problem_id:
+            continue
+        if {left_role, right_role} != {"original", "generated"}:
+            continue
+
+        similarity = parse_float(row.get("similarity"))
+        if similarity is None:
+            continue
+
+        current = parsed.get(left_problem_id)
+        if current is None or similarity > float(current["dolos_similarity"]):
+            parsed[left_problem_id] = {
+                "dolos_similarity": similarity,
+                "dolos_notes": f"dolos_pairs.csv row id={row.get('id', '')}".strip(),
+            }
+    return parsed
+
+
+def load_dolos_results(path: Path) -> dict[str, dict[str, Any]]:
+    rows = read_csv_rows(path)
+    if not rows:
+        return {}
+    fieldnames = set(rows[0].keys())
+    if {"problem_id", "dolos_similarity"}.issubset(fieldnames):
+        return parse_generic_dolos_rows(rows)
+    if {"leftFilePath", "rightFilePath", "similarity"}.issubset(fieldnames):
+        return parse_dolos_pairs_rows(rows)
+    raise ValueError(
+        "Unsupported Dolos CSV format. Expected either "
+        "problem_id,dolos_similarity,dolos_notes or Dolos pairs.csv with "
+        "leftFilePath,rightFilePath,similarity."
+    )
+
+
+def coerce_numeric_for_metrics(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    converted: list[dict[str, Any]] = []
+    for row in rows:
+        item = dict(row)
+        if item.get("passed") == "True":
+            item["passed"] = True
+        elif item.get("passed") == "False":
+            item["passed"] = False
+        for key, value in list(item.items()):
+            if key in {"problem_id", "task_id", "status", "reason", "dolos_notes", "generated_path", "test_path"}:
+                continue
+            if isinstance(value, str) and value.strip():
+                number = parse_float(value)
+                if number is not None:
+                    item[key] = number
+        converted.append(item)
+    return converted
 
 
 def main() -> int:
@@ -37,8 +135,11 @@ def main() -> int:
         return 1
 
     combined_rows = read_csv_rows(combined_path)
-    dolos_rows = read_csv_rows(dolos_results_path)
-    dolos_by_problem = {row.get("problem_id", ""): row for row in dolos_rows}
+    try:
+        dolos_by_problem = load_dolos_results(dolos_results_path)
+    except ValueError as exc:
+        print(exc)
+        return 1
 
     fieldnames = list(combined_rows[0].keys()) if combined_rows else ["problem_id"]
     for field in ["dolos_similarity", "dolos_notes"]:
@@ -51,7 +152,11 @@ def main() -> int:
         row["dolos_notes"] = dolos.get("dolos_notes", row.get("dolos_notes", ""))
 
     write_csv(output_path, combined_rows, fieldnames)
+    metrics = run_summary_metrics(coerce_numeric_for_metrics(combined_rows))
+    write_json(run_dir / "summary" / "summary_metrics_with_dolos.json", metrics)
     print(f"Wrote combined summary with Dolos results: {display_path(output_path)}")
+    print(f"Wrote summary metrics with Dolos results: {display_path(run_dir / 'summary' / 'summary_metrics_with_dolos.json')}")
+    print(f"Imported Dolos similarities: {len(dolos_by_problem)}")
     return 0
 
 

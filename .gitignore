@@ -31,3 +31,6 @@ summary/
 
 # Model-specific local experiment runs.
 experiments/humanevalx_cpp_runs/
+
+# Dolos logs.
+*.log
