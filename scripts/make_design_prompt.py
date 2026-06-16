@@ -12,7 +12,7 @@ DEFAULT_EXPERIMENT_DIR = ROOT_DIR / "experiments" / "humanevalx_cpp"
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate a design-document prompt for one dummy problem."
+        description="Generate a design-document prompt for one problem."
     )
     parser.add_argument("--problem-id", default="problem_000", help="Problem ID to process.")
     parser.add_argument(
@@ -28,19 +28,24 @@ def build_prompt(problem_id: str, source_code: str) -> str:
     return f"""以下の C++ 正解実装を読み、同じ関数を再実装できる設計書を作成してください。
 
 制約:
-- C++ コードそのものは出力しないでください。
+- 出力は Markdown の設計書だけにしてください。C++ の再実装コードは出力しないでください。
 - 設計書には、後続の C++ コード生成で関数シグネチャを間違えないための情報を必ず含めてください。
-- 特に C++ の関数シグネチャは、Markdown の `cpp` コードブロックで明記してください。
-- 設計書には必ず以下の項目を含めてください。
-  - 関数名
-  - C++ の関数シグネチャ
-  - 引数名と型
-  - 返り値の型と意味
-  - 処理内容
-  - 境界条件
-  - 想定される計算量
-- 元コードの変数名や実装細部をそのまま写すのではなく、仕様として説明してください。
-- 出力は Markdown の設計書だけにしてください。
+- C++ の関数シグネチャは、元コードにある対象関数のシグネチャと完全一致させてください。
+- 特に C++ の関数シグネチャは、Markdown の `cpp` code fence で明記してください。
+- シグネチャでは、返り値の型、関数名、引数の順序、引数名、引数の型、値渡し、reference、const の有無を変更しないでください。
+- 値渡しを勝手に const reference に変更しないでください。元コードが `std::string s` なら `const std::string& s` にせず、`vector<int> xs` なら `const vector<int>& xs` にしないでください。
+- namespace qualification を勝手に変更しないでください。元コードが `vector<int> xs` なら `vector<int> xs` のまま、`std::vector<int> xs` なら `std::vector<int> xs` のままにしてください。
+- overload、補助 API、class、namespace、別名の関数を作らないでください。
+- 元コードの実装本体をそのまま写すのではなく、仕様として説明してください。
+
+設計書には必ず以下の項目を含めてください。
+- 関数名
+- C++ の関数シグネチャ
+- 引数名、型、意味
+- 返り値の型と意味
+- 処理内容
+- 境界条件
+- 想定される時間計算量と空間計算量
 
 関数シグネチャの記載例:
 
@@ -49,6 +54,8 @@ int add(int a, int b)
 ```
 
 対象問題 ID: {problem_id}
+
+C++ 正解実装:
 
 ```cpp
 {source_code}

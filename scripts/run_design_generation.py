@@ -13,6 +13,7 @@ from ollama_client import DEFAULT_OLLAMA_URL, OllamaClient, OllamaClientError
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_EXPERIMENT_DIR = ROOT_DIR / "experiments" / "humanevalx_cpp"
+DEFAULT_PROMPT_VERSION = "prompt_v2_signature_include"
 
 
 def display_path(path: Path) -> str:
@@ -40,10 +41,15 @@ def parse_args() -> argparse.Namespace:
         help=f"Ollama base URL. Defaults to {DEFAULT_OLLAMA_URL}.",
     )
     parser.add_argument(
-        "--timeout",
+        "--ollama-timeout",
         type=float,
         default=120.0,
         help="Ollama request timeout in seconds. Defaults to 120.",
+    )
+    parser.add_argument(
+        "--prompt-version",
+        default=DEFAULT_PROMPT_VERSION,
+        help=f"Prompt version label to record in metadata. Defaults to {DEFAULT_PROMPT_VERSION}.",
     )
     parser.add_argument(
         "--experiment-dir",
@@ -72,7 +78,7 @@ def main() -> int:
         return 1
 
     prompt = prompt_path.read_text(encoding="utf-8")
-    client = OllamaClient(base_url=args.ollama_url, timeout=args.timeout)
+    client = OllamaClient(base_url=args.ollama_url, timeout=args.ollama_timeout)
 
     try:
         generated_text = client.generate(
@@ -93,7 +99,9 @@ def main() -> int:
             "problem_id": args.problem_id,
             "model": args.model,
             "temperature": args.temperature,
+            "ollama_timeout": args.ollama_timeout,
             "ollama_url": args.ollama_url,
+            "prompt_version": args.prompt_version,
             "prompt_path": display_path(prompt_path),
             "output_path": display_path(output_path),
             "timestamp": datetime.now(timezone.utc).isoformat(),
