@@ -15,6 +15,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = ROOT_DIR / "scripts"
 DEFAULT_EXPERIMENT_DIR = ROOT_DIR / "experiments" / "humanevalx_cpp"
 DEFAULT_SELECTED_IDS_PATH = ROOT_DIR / "data" / "selected" / "selected_ids.txt"
+DEFAULT_PROMPT_VERSION = "prompt_v2_signature_include"
 
 
 @dataclass(frozen=True)
@@ -49,6 +50,11 @@ def parse_args() -> argparse.Namespace:
         "--ollama-url",
         default=DEFAULT_OLLAMA_URL,
         help=f"Ollama base URL. Defaults to {DEFAULT_OLLAMA_URL}.",
+    )
+    parser.add_argument(
+        "--prompt-version",
+        default=DEFAULT_PROMPT_VERSION,
+        help=f"Prompt version label. Defaults to {DEFAULT_PROMPT_VERSION}.",
     )
     parser.add_argument(
         "--continue-on-error",
@@ -93,6 +99,8 @@ def steps_for_problem(args: argparse.Namespace, problem_id: str) -> list[Pipelin
                 "make_design_prompt.py",
                 "--problem-id",
                 problem_id,
+                "--prompt-version",
+                args.prompt_version,
                 "--experiment-dir",
                 experiment_dir,
             ),

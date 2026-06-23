@@ -54,12 +54,22 @@ DESIGN_METRIC_FIELDS = [
     "design_exists",
     "design_chars",
     "design_lines",
+    "design_code_block_count",
+    "design_cpp_code_block_count",
+    "design_signature",
+    "design_signature_similarity",
+    "design_signature_exact_match",
     "has_cpp_signature_block",
     "has_input_description",
     "has_output_description",
     "has_algorithm_description",
     "has_edge_case_description",
     "has_constraints_description",
+    "mentions_standard_library_dependency",
+    "mentions_required_include",
+    "mentions_namespace_policy",
+    "mentions_value_reference_const",
+    "mentions_complexity",
     "mentions_return_value",
     "mentions_parameter",
     "design_quality_score",
@@ -122,12 +132,22 @@ COMBINED_SUMMARY_FIELDS = [
     "design_exists",
     "design_chars",
     "design_lines",
+    "design_code_block_count",
+    "design_cpp_code_block_count",
+    "design_signature",
+    "design_signature_similarity",
+    "design_signature_exact_match",
     "has_cpp_signature_block",
     "has_input_description",
     "has_output_description",
     "has_algorithm_description",
     "has_edge_case_description",
     "has_constraints_description",
+    "mentions_standard_library_dependency",
+    "mentions_required_include",
+    "mentions_namespace_policy",
+    "mentions_value_reference_const",
+    "mentions_complexity",
     "mentions_return_value",
     "mentions_parameter",
     "design_quality_score",
@@ -391,7 +411,27 @@ def contains_any(text: str, keywords: list[str]) -> bool:
     return any(keyword.lower() in lowered for keyword in keywords)
 
 
-def compute_design_metrics_for_problem(problem_dir: Path) -> dict[str, Any]:
+def count_code_blocks(text: str) -> int:
+    return len(re.findall(r"```", text)) // 2
+
+
+def cpp_code_blocks(text: str) -> list[str]:
+    return re.findall(r"```(?:cpp|c\+\+|cc|cxx)\s*\n(.*?)```", text, flags=re.IGNORECASE | re.DOTALL)
+
+
+def design_signature(text: str) -> str:
+    for block in cpp_code_blocks(text):
+        parsed = normalize_signature(function_signature(block + "\n{"))
+        if parsed:
+            return parsed
+        for line in block.splitlines():
+            line = line.strip().rstrip(";")
+            if "(" in line and ")" in line:
+                return normalize_signature(line)
+    return ""
+
+
+def _legacy_compute_design_metrics_for_problem(problem_dir: Path) -> dict[str, Any]:
     problem_id = problem_dir.name
     design_path = problem_dir / "generated_design" / "design.md"
     payload: dict[str, Any] = {
@@ -423,6 +463,100 @@ def compute_design_metrics_for_problem(problem_dir: Path) -> dict[str, Any]:
             "design_lines": len(text.splitlines()),
             **checks,
             "design_quality_score": sum(1 for value in checks.values() if value) / len(checks),
+        }
+    )
+    return payload
+
+
+def compute_design_metrics_for_problem(problem_dir: Path) -> dict[str, Any]:
+    problem_id = problem_dir.name
+    design_path = problem_dir / "generated_design" / "design.md"
+    original_path = problem_dir / "original.cpp"
+    payload: dict[str, Any] = {
+        "problem_id": problem_id,
+        "design_path": display_path(design_path),
+        "design_exists": design_path.exists(),
+    }
+
+    if not design_path.exists():
+        payload.update(
+            {
+                field: False
+                for field in DESIGN_METRIC_FIELDS
+                if field.startswith("has_") or field.startswith("mentions_") or field.endswith("_exact_match")
+            }
+        )
+        payload.update(
+            {
+                "design_chars": 0,
+                "design_lines": 0,
+                "design_code_block_count": 0,
+                "design_cpp_code_block_count": 0,
+                "design_signature": "",
+                "design_signature_similarity": None,
+                "design_quality_score": 0.0,
+                "status": "missing_design",
+            }
+        )
+        return payload
+
+    text = design_path.read_text(encoding="utf-8")
+    original_signature = ""
+    if original_path.exists():
+        original_signature = normalize_signature(function_signature(original_path.read_text(encoding="utf-8")))
+
+    extracted_design_signature = design_signature(text)
+    signature_similarity = (
+        SequenceMatcher(None, original_signature, extracted_design_signature).ratio()
+        if original_signature or extracted_design_signature
+        else None
+    )
+    checks = {
+        "has_cpp_signature_block": bool(cpp_code_blocks(text)),
+        "has_input_description": contains_any(text, ["入力", "引数", "parameter", "argument", "input"]),
+        "has_output_description": contains_any(text, ["出力", "返り値", "戻り値", "return", "output"]),
+        "has_algorithm_description": contains_any(text, ["手順", "アルゴリズム", "処理", "algorithm", "step", "logic"]),
+        "has_edge_case_description": contains_any(text, ["境界", "edge", "corner", "empty", "空", "例外", "特殊"]),
+        "has_constraints_description": contains_any(text, ["制約", "前提", "constraint", "must", "should", "condition"]),
+        "mentions_standard_library_dependency": contains_any(
+            text,
+            [
+                "標準ライブラリ",
+                "standard library",
+                "vector",
+                "string",
+                "map",
+                "set",
+                "algorithm",
+                "cmath",
+            ],
+        ),
+        "mentions_required_include": contains_any(
+            text,
+            ["#include", "include", "<vector>", "<string>", "<algorithm>", "<cmath>"],
+        ),
+        "mentions_namespace_policy": contains_any(text, ["namespace", "std::", "using namespace std"]),
+        "mentions_value_reference_const": contains_any(text, ["値渡し", "参照", "reference", "const"]),
+        "mentions_complexity": contains_any(text, ["計算量", "時間計算量", "空間計算量", "complexity", "O("]),
+        "mentions_return_value": contains_any(text, ["返り値", "戻り値", "return value", "return"]),
+        "mentions_parameter": contains_any(text, ["引数", "parameter", "argument"]),
+    }
+    signature_exact_match = bool(
+        original_signature and extracted_design_signature and original_signature == extracted_design_signature
+    )
+    scored_checks = {**checks, "design_signature_exact_match": signature_exact_match}
+    payload.update(
+        {
+            "status": "success",
+            "design_chars": len(text),
+            "design_lines": len(text.splitlines()),
+            "design_code_block_count": count_code_blocks(text),
+            "design_cpp_code_block_count": len(cpp_code_blocks(text)),
+            "design_signature": extracted_design_signature,
+            "design_signature_similarity": signature_similarity,
+            "design_signature_exact_match": signature_exact_match,
+            **checks,
+            "design_quality_score": sum(1 for value in scored_checks.values() if value) / len(scored_checks),
         }
     )
     return payload

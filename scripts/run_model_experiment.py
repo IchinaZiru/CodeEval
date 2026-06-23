@@ -126,6 +126,8 @@ def build_pipeline_command(args: argparse.Namespace, run_dir: Path) -> list[str]
         args.model,
         "--temperature",
         str(args.temperature),
+        "--prompt-version",
+        args.prompt_version,
         "--compiler",
         args.compiler,
         "--ollama-url",

@@ -67,6 +67,12 @@ problem_001,0.75,
 - algorithm description
 - edge case description
 - constraints description
+- standard library dependency description
+- required include description
+- namespace policy description
+- value/reference/const description
+- complexity description
+- design signature exact match
 - return value mention
 - parameter mention
 - design quality score
