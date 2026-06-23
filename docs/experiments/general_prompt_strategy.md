@@ -1,5 +1,7 @@
 # General Prompt Strategy
 
+v3 と v4 の詳細な目的、比較条件、評価方法は `docs/experiments/prompt_v3_v4_plan.md` を参照する。
+
 ## 目的
 
 次の実験では、問題数を単純に増やすことではなく、HumanEval-X C++ 全体に対して同じ単一プロンプトがどこまで安定して機能するかを調べる。

@@ -1,5 +1,7 @@
 # Prompt Versions
 
+詳細な v3/v4 の実験目的、比較条件、評価方法は `docs/experiments/prompt_v3_v4_plan.md` にまとめる。
+
 ## prompt_v1_baseline
 
 初期のベースラインプロンプト。
