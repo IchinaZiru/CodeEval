@@ -2,6 +2,8 @@
 
 この文書は、`prompt_v3_general_design` と `prompt_v4_general_design_self_check` の目的、比較条件、評価方法、結果の読み方を整理するためのメモである。
 
+実行コマンド、集計コマンド、`--force-run` の注意は `docs/experiments/run_commands.md` を参照する。
+
 ## 背景
 
 このリポジトリでは、HumanEval-X C++ の正解実装 `original.cpp` から設計書 `design.md` を逆生成し、その設計書から C++ の `generated.cpp` を再生成する。
@@ -82,6 +84,50 @@ v3 では、次のことは行わない。
 - codegen prompt に self-check を追加しない。
 
 v3 で変えるのは、基本的に設計書生成プロンプトである。コード生成プロンプト側の改善は v4 の対象にする。
+
+## v3.1: prompt_v3_general_design_v2 の目的
+
+`prompt_v3_general_design_v2` は、既存の `prompt_v3_general_design` を上書きせずに追加する v3.1 相当のプロンプトである。
+
+v3.1 の目的は、v3 の汎用性を維持したまま、再実装に必要な具体性を補うことである。ここでいう具体性とは、特定の HumanEval-X 問題に合わせた個別ルールではなく、一般的な C++ 関数を再実装するときに必要になる処理対象、無視条件、状態更新、結果追加タイミング、ループ後処理などの情報である。
+
+v3.1 でも codegen prompt は変更しない。codegen self-check は追加しない。設計書生成プロンプトの改善効果だけを見るためである。codegen self-check は v4 の対象として残す。
+
+v3.1 で追加して設計書に含めさせる観点:
+
+- 入力のうち処理対象にする要素
+- 無視する要素、空白、区切り文字、非対象文字の扱い
+- 出力に含めるもの、含めないもの
+- 状態変数、カウンタ、フラグ、スタック、バッファ、一時変数の役割
+- ループ中の状態更新条件
+- 条件を満たしたときに結果へ追加するタイミング
+- 結果追加前後で状態をリセットする必要があるか
+- ループ終了後に追加処理が必要か
+- 最後に残った状態変数やバッファの扱い
+- 空入力、単一要素、重複要素、境界値の扱い
+- 早期 return が必要な条件
+- 比較条件が `<`, `<=`, `>`, `>=`, `==`, `!=` のどれに相当するか
+- 並び順が重要な場合、昇順、降順、元の順序維持のどれか
+
+v3.1 の比較条件:
+
+```text
+design prompt = prompt_v3_general_design_v2
+codegen prompt = v3 と同じ
+codegen self-check = なし
+対象問題 = v3 と同じ10問
+対象モデル = gpt-oss:20b, phi4:latest, qwen3-coder:latest
+design temperature = 0.0
+pass@1 temperature = 0.0
+pass@3 temperature = 0.2
+pass@3 samples = 3
+```
+
+v3.1 の実験結果は、既存 v3 と混ざらないように次へ保存する。
+
+```text
+experiments/humanevalx_cpp_runs/prompt_v3_general_design_v2/<model_dir>/
+```
 
 ## v3 の評価方法
 
