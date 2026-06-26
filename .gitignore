@@ -38,3 +38,5 @@ experiments/humanevalx_cpp_runs/
 # Private local notes
 private-notes/
 obsidian-scratch/
+# Dolos logs.
+*.log

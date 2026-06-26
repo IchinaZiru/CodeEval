@@ -106,6 +106,8 @@ def steps_for_problem(args: argparse.Namespace, problem_id: str) -> list[Pipelin
                 "make_design_prompt.py",
                 "--problem-id",
                 problem_id,
+                "--prompt-version",
+                args.prompt_version,
                 "--experiment-dir",
                 experiment_dir,
             ),
