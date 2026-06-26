@@ -44,8 +44,6 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--ollama-timeout",
-        "--timeout",
-        dest="ollama_timeout",
         type=float,
         default=120.0,
         help="Ollama request timeout in seconds. Defaults to 120.",

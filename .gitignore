@@ -32,5 +32,11 @@ summary/
 # Model-specific local experiment runs.
 experiments/humanevalx_cpp_runs/
 
+# Obsidian local settings
+.obsidian/
+
+# Private local notes
+private-notes/
+obsidian-scratch/
 # Dolos logs.
 *.log

@@ -17,6 +17,7 @@ from ollama_client import DEFAULT_OLLAMA_URL
 ROOT_DIR = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = ROOT_DIR / "scripts"
 DEFAULT_RUNS_ROOT = ROOT_DIR / "experiments" / "humanevalx_cpp_runs"
+DEFAULT_PROMPT_VERSION = "prompt_v2_signature_include"
 
 
 def parse_args() -> argparse.Namespace:
@@ -26,8 +27,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model", required=True, help="Ollama model name, for example qwen3-coder:latest.")
     parser.add_argument(
         "--prompt-version",
-        default="baseline_prompt",
-        help="Prompt version directory name. Defaults to baseline_prompt.",
+        default=DEFAULT_PROMPT_VERSION,
+        help=f"Prompt version directory name. Defaults to {DEFAULT_PROMPT_VERSION}.",
     )
     parser.add_argument(
         "--runs-root",
@@ -38,6 +39,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit", type=int, default=10, help="Number of problems to prepare. Defaults to 10.")
     parser.add_argument("--start-index", type=int, default=0, help="Start index for dataset selection. Defaults to 0.")
     parser.add_argument("--temperature", type=float, default=0.0, help="Ollama temperature. Defaults to 0.0.")
+    parser.add_argument(
+        "--ollama-timeout",
+        type=float,
+        default=120.0,
+        help="Ollama request timeout in seconds. Defaults to 120.",
+    )
     parser.add_argument("--compiler", default="g++", help="C++ compiler command or path. Defaults to g++.")
     parser.add_argument("--std", default="c++17", help="C++ standard for original validation. Defaults to c++17.")
     parser.add_argument(
@@ -118,22 +125,25 @@ def build_prepare_command(args: argparse.Namespace, run_dir: Path) -> list[str]:
 
 
 def build_pipeline_command(args: argparse.Namespace, run_dir: Path) -> list[str]:
-    command = script_command(
-        "run_pipeline.py",
-        "--problem-ids",
-        *problem_ids_for_limit(args.limit),
-        "--model",
-        args.model,
-        "--temperature",
-        str(args.temperature),
-        "--prompt-version",
-        args.prompt_version,
-        "--compiler",
-        args.compiler,
-        "--ollama-url",
-        args.ollama_url,
-        "--experiment-dir",
-        str(run_dir),
+    command = script_command("run_pipeline.py")
+    command.extend(["--problem-ids", *problem_ids_for_limit(args.limit)])
+    command.extend(
+        [
+            "--model",
+            args.model,
+            "--temperature",
+            str(args.temperature),
+            "--ollama-timeout",
+            str(args.ollama_timeout),
+            "--prompt-version",
+            args.prompt_version,
+            "--compiler",
+            args.compiler,
+            "--ollama-url",
+            args.ollama_url,
+            "--experiment-dir",
+            str(run_dir),
+        ]
     )
     if args.continue_on_error:
         command.append("--continue-on-error")
@@ -149,6 +159,7 @@ def run_metadata(args: argparse.Namespace, run_dir: Path, model_dir_name: str, c
         "limit": args.limit,
         "start_index": args.start_index,
         "temperature": args.temperature,
+        "ollama_timeout": args.ollama_timeout,
         "compiler": args.compiler,
         "std": args.std,
         "ollama_url": args.ollama_url,
