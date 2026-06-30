@@ -105,8 +105,35 @@ experiments/humanevalx_cpp_runs/prompt_v3_general_design_v2/<model_dir>/
 
 ## prompt_v4_general_design_self_check
 
-予定している次段階のプロンプト。
+v3 の設計書生成プロンプトを固定し、code generation prompt にだけ self-check を追加するプロンプト。
 
 - design prompt は `prompt_v3_general_design` を維持する。
-- codegen prompt に self-check を追加する。
+- codegen prompt は v2 相当を基盤にし、最終出力前の self-check を追加する。
 - self-check の内容は出力させず、`generated.cpp` だけを出力させる。
+
+目的:
+
+- 設計書生成を変えずに、コード生成段階の形式的失敗を減らす。
+- `generated.cpp` が単体の translation unit としてコンパイルできる確率を上げる。
+- include 不足、namespace 不整合、関数シグネチャ不一致、Markdown code fence 混入、余計な `main` 関数混入などを抑える。
+
+v4 で self-check させる内容:
+
+- `generated.cpp` は単体でコンパイル可能か。
+- 必要な `#include` があるか。
+- `vector` を使うなら `#include <vector>` があるか。
+- `string` を使うなら `#include <string>` があるか。
+- `map`、`set`、`tuple`、`utility`、`algorithm`、`cmath`、`numeric` などを使うなら対応 include があるか。
+- `std::` を使うか `using namespace std;` を使うかが一貫しているか。
+- 設計書に書かれた C++ 関数シグネチャと完全一致しているか。
+- 返り値の型、関数名、引数の順序、引数名、引数の型を変えていないか。
+- 値渡しを `const reference` に勝手に変更していないか。
+- reference や `const` の有無を変更していないか。
+- 余計な `main` 関数、テストコード、Markdown code fence、説明文を出していないか。
+- 最終出力が C++ コードのみになっているか。
+
+実験結果の保存先:
+
+```text
+experiments/humanevalx_cpp_runs/prompt_v4_general_design_self_check/<model_dir>/
+```

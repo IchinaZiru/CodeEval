@@ -13,6 +13,7 @@ SUPPORTED_PROMPT_VERSIONS = (
     "prompt_v2_signature_include",
     "prompt_v3_general_design",
     "prompt_v3_general_design_v2",
+    "prompt_v4_general_design_self_check",
 )
 
 
@@ -224,6 +225,8 @@ def build_prompt(problem_id: str, source_code: str, prompt_version: str = DEFAUL
         return build_v3_prompt(problem_id, source_code)
     if prompt_version == "prompt_v3_general_design_v2":
         return build_v3_general_design_v2_prompt(problem_id, source_code)
+    if prompt_version == "prompt_v4_general_design_self_check":
+        return build_v3_prompt(problem_id, source_code)
     raise ValueError(f"Unsupported prompt version: {prompt_version}")
 
 
