@@ -75,7 +75,9 @@ def build_v4_prompt(problem_id: str, design_text: str) -> str:
 - 出力先は `generated.cpp` です。`generated.cpp` は、リポジトリの `test.cpp` と一緒にコンパイルされる独立した translation unit として成立する必要があります。
 - 関数シグネチャまたは実装で必要な標準ライブラリの include は、`generated.cpp` 内に必ず出力してください。必要に応じて `#include <vector>`、`#include <string>`、`#include <algorithm>`、`#include <cmath>`、`#include <numeric>`、`#include <set>`、`#include <map>`、`#include <tuple>`、`#include <utility>` などを含めてください。
 - `generated.cpp` は `test.cpp` 側の include に依存してはいけません。
-- 設計書の正確なシグネチャが `vector`、`string`、`map`、`set`、`tuple` などの非修飾の標準ライブラリ名を使っている場合は、そのシグネチャを変更せずにコンパイルできるよう、必要な include と `using namespace std;` などの namespace 対応を追加してください。
+- 設計書の正確なシグネチャが `vector`、`string`、`map`、`set`、`tuple`、`pair` などの非修飾の標準ライブラリ名を使っている場合は、そのシグネチャを変更せずにコンパイルできるよう、必要な include と namespace 対応を必ず追加してください。
+- 重要: `#include <vector>` だけでは `vector<float>` という非修飾名は使えません。シグネチャに `vector<float>` のような非修飾標準型がある場合は、include の後、関数定義の前に `using namespace std;` を出力してください。
+- 設計書のシグネチャが `std::vector<float>` のように `std::` 付きなら、その `std::` を維持してください。この場合は `vector<float>` に変えないでください。
 - namespace qualification を勝手に変更しないでください。設計書が `vector<int> xs` なら `vector<int> xs` のまま、`std::vector<int> xs` なら `std::vector<int> xs` のまま出力してください。
 - 設計書にある関数シグネチャを完全一致で維持してください。
 - 返り値の型、関数名、引数の順序、引数名、引数の型、値渡し、reference、const の有無を変更しないでください。
@@ -96,6 +98,9 @@ def build_v4_prompt(problem_id: str, design_text: str) -> str:
 - `abs`、`sqrt`、`pow` などを使うなら `#include <cmath>` があるか確認してください。
 - `accumulate` などを使うなら `#include <numeric>` があるか確認してください。
 - `std::` を使う方針か `using namespace std;` を使う方針かが一貫しているか確認してください。
+- シグネチャや実装で `vector`、`string`、`map`、`set`、`tuple`、`pair` などを非修飾で使っている場合、include の後、関数定義の前に `using namespace std;` があるか確認してください。
+- `#include <vector>` があっても `using namespace std;` または適切な `std::` がなければ `vector<float>` はコンパイルできないことを確認してください。
+- 設計書が `vector<float>` のような非修飾シグネチャを指定している場合、`std::vector<float>` に変更せず、`using namespace std;` を追加して完全一致のシグネチャを守ってください。
 - 設計書に書かれた C++ 関数シグネチャと完全一致しているか確認してください。
 - 返り値の型を変えていないか確認してください。
 - 関数名を変えていないか確認してください。

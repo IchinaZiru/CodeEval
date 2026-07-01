@@ -125,6 +125,7 @@ v4 で self-check させる内容:
 - `string` を使うなら `#include <string>` があるか。
 - `map`、`set`、`tuple`、`utility`、`algorithm`、`cmath`、`numeric` などを使うなら対応 include があるか。
 - `std::` を使うか `using namespace std;` を使うかが一貫しているか。
+- シグネチャで `vector<float>` のような非修飾標準ライブラリ型を使う場合、include だけでなく `using namespace std;` を関数定義前に出しているか。
 - 設計書に書かれた C++ 関数シグネチャと完全一致しているか。
 - 返り値の型、関数名、引数の順序、引数名、引数の型を変えていないか。
 - 値渡しを `const reference` に勝手に変更していないか。

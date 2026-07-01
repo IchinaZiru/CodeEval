@@ -264,6 +264,7 @@ v4 の codegen prompt では、最終出力を出す前にモデル内部で次�
 - `const` の有無を変更していないか。
 - namespace qualification を変更していないか。
 - `vector` を使うなら `#include <vector>` があるか。
+- シグネチャで `vector<float>` のような非修飾標準ライブラリ型を使う場合、`#include <vector>` だけでなく `using namespace std;` を関数定義前に出しているか。
 - `string` を使うなら `#include <string>` があるか。
 - `sort` などを使うなら `#include <algorithm>` があるか。
 - `abs`, `sqrt`, `pow` などを使うなら `#include <cmath>` があるか。
@@ -300,6 +301,10 @@ v4 で期待する主な改善は、compile_failed の減少である。
 v4 で compile_failed が減り、pass@k が上がる場合、self-check は形式的なコード生成失敗を抑える効果があったと解釈できる。
 
 一方、compile_failed は減ったが test_failed が増える場合、形式は整ったがアルゴリズム理解はまだ不十分であると解釈する。
+
+初期 v4 の qwen3-coder:latest 小規模検証では、`problem_000` と `problem_004` の compile_failed は include 不足ではなく namespace 不足だった。生成コードには `#include <vector>` があったが、関数シグネチャが `vector<float>` のように非修飾で、`using namespace std;` が出力されていなかった。
+
+このため v4 prompt では、非修飾標準ライブラリ型をシグネチャで維持する場合、include の後、関数定義の前に `using namespace std;` を出力することを self-check に追加する。
 
 ## v4 の評価方法
 
