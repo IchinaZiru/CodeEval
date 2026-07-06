@@ -427,6 +427,147 @@ python scripts/summarize_passk_results.py `
   --run-dir experiments\humanevalx_cpp_runs\prompt_v3_general_design_v2\qwen3-coder_latest
 ```
 
+## v4 pass@k 実験: prompt_v4_general_design_self_check
+
+`prompt_v4_general_design_self_check` では、design prompt は `prompt_v3_general_design` と同じにする。
+変更するのは codegen prompt だけで、最終出力前の self-check を追加する。
+
+self-check はモデル内部の確認として使わせる。self-check の結果、チェックリスト、説明文は出力させない。
+最終出力は `generated.cpp` に保存できる C++ コードのみである。
+
+標準設定:
+
+```text
+prompt_version: prompt_v4_general_design_self_check
+problem count: 10
+design temperature: 0.0
+pass@1 temperature: 0.0
+pass@3 temperature: 0.2
+pass@3 samples: 3
+compiler: C:\msys64\ucrt64\bin\g++.exe
+std: c++17
+ollama_url: http://localhost:11434
+ollama_timeout: 120.0
+test_timeout: 10.0
+```
+
+保存先:
+
+```text
+experiments/humanevalx_cpp_runs/prompt_v4_general_design_self_check/<model_dir_name>/
+```
+
+### v4 design prompt dry-run
+
+v4 の design prompt は v3 と同じ内容になる。
+
+```powershell
+python scripts/make_design_prompt.py `
+  --problem-id problem_001 `
+  --prompt-version prompt_v4_general_design_self_check `
+  --dry-run
+```
+
+### v4 pass@k dry-run
+
+```powershell
+python scripts/run_passk_experiment.py `
+  --model qwen3-coder:latest `
+  --prompt-version prompt_v4_general_design_self_check `
+  --limit 10 `
+  --start-index 0 `
+  --design-temperature 0.0 `
+  --pass1-temperature 0.0 `
+  --pass3-temperature 0.2 `
+  --pass3-samples 3 `
+  --compiler C:\msys64\ucrt64\bin\g++.exe `
+  --std c++17 `
+  --ollama-url http://localhost:11434 `
+  --ollama-timeout 120.0 `
+  --test-timeout 10.0 `
+  --continue-on-error `
+  --dry-run
+```
+
+### v4 本実験: gpt-oss:20b
+
+```powershell
+python scripts/run_passk_experiment.py `
+  --model gpt-oss:20b `
+  --prompt-version prompt_v4_general_design_self_check `
+  --limit 10 `
+  --start-index 0 `
+  --design-temperature 0.0 `
+  --pass1-temperature 0.0 `
+  --pass3-temperature 0.2 `
+  --pass3-samples 3 `
+  --compiler C:\msys64\ucrt64\bin\g++.exe `
+  --std c++17 `
+  --ollama-url http://localhost:11434 `
+  --ollama-timeout 120.0 `
+  --test-timeout 10.0 `
+  --continue-on-error
+```
+
+### v4 本実験: phi4:latest
+
+```powershell
+python scripts/run_passk_experiment.py `
+  --model phi4:latest `
+  --prompt-version prompt_v4_general_design_self_check `
+  --limit 10 `
+  --start-index 0 `
+  --design-temperature 0.0 `
+  --pass1-temperature 0.0 `
+  --pass3-temperature 0.2 `
+  --pass3-samples 3 `
+  --compiler C:\msys64\ucrt64\bin\g++.exe `
+  --std c++17 `
+  --ollama-url http://localhost:11434 `
+  --ollama-timeout 120.0 `
+  --test-timeout 10.0 `
+  --continue-on-error
+```
+
+### v4 本実験: qwen3-coder:latest
+
+```powershell
+python scripts/run_passk_experiment.py `
+  --model qwen3-coder:latest `
+  --prompt-version prompt_v4_general_design_self_check `
+  --limit 10 `
+  --start-index 0 `
+  --design-temperature 0.0 `
+  --pass1-temperature 0.0 `
+  --pass3-temperature 0.2 `
+  --pass3-samples 3 `
+  --compiler C:\msys64\ucrt64\bin\g++.exe `
+  --std c++17 `
+  --ollama-url http://localhost:11434 `
+  --ollama-timeout 120.0 `
+  --test-timeout 10.0 `
+  --continue-on-error
+```
+
+既存の v4 run directory を上書きして再実行する場合だけ、上記の本実験コマンドに `--force-run` を追加する。
+
+### v4 pass@k 集計
+
+```powershell
+python scripts/summarize_passk_results.py `
+  --run-dir experiments\humanevalx_cpp_runs\prompt_v4_general_design_self_check\gpt-oss_20b
+```
+
+```powershell
+python scripts/summarize_passk_results.py `
+  --run-dir experiments\humanevalx_cpp_runs\prompt_v4_general_design_self_check\phi4_latest
+```
+
+```powershell
+python scripts/summarize_passk_results.py `
+  --run-dir experiments\humanevalx_cpp_runs\prompt_v4_general_design_self_check\qwen3-coder_latest
+```
+
 ## run_passk_experiment.py の主要引数
 
 ```text

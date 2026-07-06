@@ -67,7 +67,7 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def refresh_codegen_prompt(problem_id: str, problem_dir: Path) -> Path:
+def refresh_codegen_prompt(problem_id: str, problem_dir: Path, prompt_version: str) -> Path:
     design_path = problem_dir / "generated_design" / "design.md"
     prompt_path = problem_dir / "prompts" / "codegen_prompt.txt"
 
@@ -79,7 +79,7 @@ def refresh_codegen_prompt(problem_id: str, problem_dir: Path) -> Path:
 
     design_text = design_path.read_text(encoding="utf-8")
     prompt_path.parent.mkdir(parents=True, exist_ok=True)
-    prompt_path.write_text(build_prompt(problem_id, design_text), encoding="utf-8")
+    prompt_path.write_text(build_prompt(problem_id, design_text, prompt_version), encoding="utf-8")
     return prompt_path
 
 
@@ -103,7 +103,7 @@ def main() -> int:
     metadata_path = problem_dir / "results" / "code_generation_metadata.json"
 
     try:
-        prompt_path = refresh_codegen_prompt(args.problem_id, problem_dir)
+        prompt_path = refresh_codegen_prompt(args.problem_id, problem_dir, args.prompt_version)
     except FileNotFoundError as exc:
         print(exc)
         return 1

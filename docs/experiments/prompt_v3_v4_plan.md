@@ -225,6 +225,10 @@ generation_failed:
 
 v3 では設計書生成プロンプトを改善する。v4 では設計書生成プロンプトは v3 のまま固定し、コード生成プロンプトに self-check を追加する。
 
+v3 の最終結果では、`gpt-oss:20b` と `phi4:latest` は pass@3 で 10/10 成功した一方、`qwen3-coder:latest` では `problem_000` と `problem_004` が `compile_failed`、`problem_001` が `test_failed` として残った。特に `compile_failed` は、設計書に情報がないというより、後段の codegen prompt が include、namespace、translation unit としての成立条件を十分に守れていない可能性がある。
+
+そのため v4 では design prompt を変更しない。比較上の差分を codegen prompt の self-check に限定する。
+
 つまり、v3 と v4 の比較では、次の差だけを見る。
 
 ```text
@@ -238,6 +242,12 @@ v4:
 ```
 
 この設計により、v4 の効果を「コード生成時の自己確認がどれだけ効いたか」として読みやすくする。
+
+v4 の保存先:
+
+```text
+experiments/humanevalx_cpp_runs/prompt_v4_general_design_self_check/<model_dir>/
+```
 
 ## v4 で追加する self-check の内容
 
@@ -254,6 +264,7 @@ v4 の codegen prompt では、最終出力を出す前にモデル内部で次�
 - `const` の有無を変更していないか。
 - namespace qualification を変更していないか。
 - `vector` を使うなら `#include <vector>` があるか。
+- シグネチャで `vector<float>` のような非修飾標準ライブラリ型を使う場合、`#include <vector>` だけでなく `using namespace std;` を関数定義前に出しているか。
 - `string` を使うなら `#include <string>` があるか。
 - `sort` などを使うなら `#include <algorithm>` があるか。
 - `abs`, `sqrt`, `pow` などを使うなら `#include <cmath>` があるか。
@@ -290,6 +301,10 @@ v4 で期待する主な改善は、compile_failed の減少である。
 v4 で compile_failed が減り、pass@k が上がる場合、self-check は形式的なコード生成失敗を抑える効果があったと解釈できる。
 
 一方、compile_failed は減ったが test_failed が増える場合、形式は整ったがアルゴリズム理解はまだ不十分であると解釈する。
+
+初期 v4 の qwen3-coder:latest 小規模検証では、`problem_000` と `problem_004` の compile_failed は include 不足ではなく namespace 不足だった。生成コードには `#include <vector>` があったが、関数シグネチャが `vector<float>` のように非修飾で、`using namespace std;` が出力されていなかった。
+
+このため v4 prompt では、非修飾標準ライブラリ型をシグネチャで維持する場合、include の後、関数定義の前に `using namespace std;` を出力することを self-check に追加する。
 
 ## v4 の評価方法
 
